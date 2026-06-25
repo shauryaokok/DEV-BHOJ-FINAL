@@ -913,11 +913,11 @@ async function delReviewFromDB(id){
   return !error;
 }
 
-function showPage(page,cat){
+async function showPage(page,cat){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById(page+"Page").classList.add("active");
   window.scrollTo(0,0);
-  if(page==="menu"){buildMenuPage();if(cat)setTimeout(()=>switchMenuCat(cat),80);}
+  if(page==="menu"){await buildMenuPage();if(cat)setTimeout(()=>switchMenuCat(cat),80);}
   if(page==="home"){setTimeout(initReveal,100);loadDynReviews();}
 }
 function scrollToId(id){setTimeout(()=>{const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:"smooth"});},100);}
@@ -978,8 +978,10 @@ window.addEventListener("scroll",()=>{
   nav.style.boxShadow=window.scrollY>60?"0 4px 30px rgba(0,0,0,.3)":"none";
 });
 
-function buildMenuPage(){
-  if(menuBuilt)return;menuBuilt=true;menuData=getMenu();
+async function buildMenuPage(){
+  if(menuBuilt)return;menuBuilt=true;
+  // LOAD FRESH FROM SUPABASE
+  menuData=await getMenuFromDB();
   const pills=document.getElementById("catPills");
   const secs=document.getElementById("menuSections");
   pills.innerHTML=CATS_DATA.map((c,i)=>`<div class="cpill ${i===0?"active":""}" onclick="switchMenuCat('${c.name.replace(/'/g,"\\'")}',this)">${c.icon} ${c.name}</div>`).join("");
@@ -1007,11 +1009,11 @@ function switchMenuCat(cat,btn){
   window.scrollTo(0,0);
 }
 
-function doMenuSearch(q){
+async function doMenuSearch(q){
   const sr=document.getElementById("searchResultsSec"),ms=document.getElementById("menuSections"),grid=document.getElementById("srGrid"),noRes=document.getElementById("noResultsM"),cnt=document.getElementById("srCount");
   if(!q.trim()){sr.style.display="none";ms.style.display="block";return;}
   sr.style.display="block";ms.style.display="none";
-  const all=menuData||getMenu();
+  const all=menuData.length?menuData:(await getMenuFromDB());
   const matches=all.filter(d=>d.name.toLowerCase().includes(q.toLowerCase()));
   if(!matches.length){grid.innerHTML="";noRes.style.display="block";cnt.textContent="";}
   else{noRes.style.display="none";cnt.textContent=`${matches.length} dishes found`;grid.innerHTML=matches.map(d=>`<div class="sr-card"><div><div class="dish-name">${d.name}</div>${SPD.includes(d.name)?'<span class="dish-badge badge-special">⭐ Special</span>':d.popular?'<span class="dish-badge badge-pop">★ Popular</span>':'<span class="dish-badge badge-veg">● Veg</span>'}</div><div class="dish-price">₹${d.price}</div></div>`).join("");}
@@ -1037,7 +1039,7 @@ function switchATab(name,btn){
   document.querySelectorAll(".atab").forEach(b=>b.classList.remove("active"));
   document.getElementById("apanel-"+name).classList.add("active");btn.classList.add("active");
 }
-function initAdmin(){menuData=getMenu();renderAdminStats();renderAdminCats();renderSpList();renderRevList();}
+async function initAdmin(){menuData=await getMenuFromDB();renderAdminStats();renderAdminCats();renderSpList();renderRevList();}
 function renderAdminStats(){
   const cats=[...new Set(menuData.map(d=>d.cat))].length,pops=menuData.filter(d=>d.popular).length,sp=getSpecials().length;
   document.getElementById("adminStats").innerHTML=`<div class="astat-box"><div class="astat-num">${menuData.length}</div><div class="astat-label">Total Dishes</div></div><div class="astat-box"><div class="astat-num">${cats}</div><div class="astat-label">Categories</div></div><div class="astat-box"><div class="astat-num">${pops}</div><div class="astat-label">Popular</div></div><div class="astat-box"><div class="astat-num">${sp}</div><div class="astat-label">Specials</div></div>`;
